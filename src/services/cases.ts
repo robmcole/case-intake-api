@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { badRequest, notFound } from "../httpError";
 import { isAssigned } from "./assignments";
+import { record } from "./audit";
 import {
   CaseExport,
   CaseJson,
@@ -38,35 +39,48 @@ function listWhere(query: CaseListQuery): Prisma.CaseWhereInput {
   return where;
 }
 
-export async function getById(id: number): Promise<CaseJson> {
-  // Case read does not check assignment. See SEEDED.md.
-  const row = await prisma.case.findUnique({ where: { id } });
+export async function findCaseForExaminer(id: number, examinerId: string) {
+  return prisma.case.findFirst({
+    where: {
+      id,
+      assignments: { some: { examinerId } },
+    },
+  });
+}
+
+export async function getById(examinerId: string, id: number): Promise<CaseJson> {
+  const row = await findCaseForExaminer(id, examinerId);
   if (!row) {
+    await record(examinerId, `access-denied GET /cases/${id}`, id);
     throw notFound("Case not found");
   }
   return toCaseJson(row);
 }
 
-export async function list(query: CaseListQuery): Promise<CaseJson[]> {
-  // Case list does not check assignment. See SEEDED.md.
+export async function list(examinerId: string, query: CaseListQuery): Promise<CaseJson[]> {
   const rows = await prisma.case.findMany({
-    where: listWhere(query),
+    where: {
+      ...listWhere(query),
+      assignments: { some: { examinerId } },
+    },
     orderBy: { id: "asc" },
   });
   return rows.map(toCaseJson);
 }
 
-export async function exportCase(id: number): Promise<CaseExport> {
-  // Case export does not check assignment. See SEEDED.md.
-  const row = await prisma.case.findUnique({
+export async function exportCase(examinerId: string, id: number): Promise<CaseExport> {
+  const authorized = await findCaseForExaminer(id, examinerId);
+  if (!authorized) {
+    await record(examinerId, `access-denied GET /cases/${id}/export`, id);
+    throw notFound("Case not found");
+  }
+
+  const row = await prisma.case.findUniqueOrThrow({
     where: { id },
     include: {
       filings: { orderBy: { id: "asc" } },
     },
   });
-  if (!row) {
-    throw notFound("Case not found");
-  }
 
   return {
     case: toCaseJson(row),
