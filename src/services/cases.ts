@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "../db";
 import { badRequest, notFound } from "../httpError";
+import { record } from "./audit";
 import { isAssigned } from "./assignments";
 import {
   CaseExport,
@@ -27,8 +28,10 @@ function toFilingJson(row: { id: number; caseId: number; title: string; status: 
   };
 }
 
-function listWhere(query: CaseListQuery): Prisma.CaseWhereInput {
-  const where: Prisma.CaseWhereInput = {};
+function listWhere(query: CaseListQuery, examinerId: string): Prisma.CaseWhereInput {
+  const where: Prisma.CaseWhereInput = {
+    assignments: { some: { examinerId } },
+  };
   if (query.status) {
     where.status = query.status;
   }
@@ -38,39 +41,53 @@ function listWhere(query: CaseListQuery): Prisma.CaseWhereInput {
   return where;
 }
 
-export async function getById(id: number): Promise<CaseJson> {
-  // Case read does not check assignment. See SEEDED.md.
-  const row = await prisma.case.findUnique({ where: { id } });
+export async function findCaseForExaminer(id: number, examinerId: string) {
+  return prisma.case.findFirst({
+    where: {
+      id,
+      assignments: { some: { examinerId } },
+    },
+  });
+}
+
+async function denyCaseRead(examinerId: string, action: string, caseId: number): Promise<never> {
+  await record(examinerId, action, caseId);
+  throw notFound("Case not found");
+}
+
+export async function getById(examinerId: string, id: number): Promise<CaseJson> {
+  const row = await findCaseForExaminer(id, examinerId);
   if (!row) {
-    throw notFound("Case not found");
+    return denyCaseRead(examinerId, `access-denied GET /cases/${id}`, id);
   }
   return toCaseJson(row);
 }
 
-export async function list(query: CaseListQuery): Promise<CaseJson[]> {
-  // Case list does not check assignment. See SEEDED.md.
+export async function list(examinerId: string, query: CaseListQuery): Promise<CaseJson[]> {
   const rows = await prisma.case.findMany({
-    where: listWhere(query),
+    where: listWhere(query, examinerId),
     orderBy: { id: "asc" },
   });
+  if (rows.length === 0) {
+    return denyCaseRead(examinerId, "access-denied GET /cases", 0);
+  }
   return rows.map(toCaseJson);
 }
 
-export async function exportCase(id: number): Promise<CaseExport> {
-  // Case export does not check assignment. See SEEDED.md.
-  const row = await prisma.case.findUnique({
-    where: { id },
-    include: {
-      filings: { orderBy: { id: "asc" } },
-    },
-  });
+export async function exportCase(examinerId: string, id: number): Promise<CaseExport> {
+  const row = await findCaseForExaminer(id, examinerId);
   if (!row) {
-    throw notFound("Case not found");
+    return denyCaseRead(examinerId, `access-denied GET /cases/${id}/export`, id);
   }
+
+  const filings = await prisma.filing.findMany({
+    where: { caseId: row.id },
+    orderBy: { id: "asc" },
+  });
 
   return {
     case: toCaseJson(row),
-    filings: row.filings.map(toFilingJson),
+    filings: filings.map(toFilingJson),
     generatedAt: new Date().toISOString(),
   };
 }
