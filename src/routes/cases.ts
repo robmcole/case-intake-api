@@ -8,7 +8,7 @@ export const casesRouter = Router();
 casesRouter.get(
   "/",
   asyncHandler(async (req, res) => {
-    const cases = await list({
+    const cases = await list(req.examinerId, {
       status: optionalQueryString(req.query.status, "status"),
       title: optionalQueryString(req.query.title, "title"),
     });
@@ -19,7 +19,7 @@ casesRouter.get(
 casesRouter.get(
   "/:id/export",
   asyncHandler(async (req, res) => {
-    const body = await exportCase(parseRouteId(req.params.id, "case id"));
+    const body = await exportCase(req.examinerId, parseRouteId(req.params.id, "case id"));
     res.json(body);
   }),
 );
@@ -27,7 +27,7 @@ casesRouter.get(
 casesRouter.get(
   "/:id",
   asyncHandler(async (req, res) => {
-    const body = await getById(parseRouteId(req.params.id, "case id"));
+    const body = await getById(req.examinerId, parseRouteId(req.params.id, "case id"));
     res.json(body);
   }),
 );
