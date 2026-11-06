@@ -1,0 +1,42 @@
+{
+  "findingId": "412",
+  "control": "ac-3",
+  "timestamp": "2026-11-06T20:01:46.310Z",
+  "sha": "47f6839fb6ba9c4fed261ea58c9e7606f4d5b277",
+  "branch": "finding/412",
+  "environment": "local build at 47f6839fb6ba9c4fed261ea58c9e7606f4d5b277, with uncommitted changes",
+  "denied": {
+    "role": "denied",
+    "examinerId": "examiner-b",
+    "method": "GET",
+    "url": "http://127.0.0.1:53764/cases/1042",
+    "status": 404,
+    "headers": {
+      "x-powered-by": "Express",
+      "content-type": "application/json; charset=utf-8",
+      "content-length": "319",
+      "etag": "W/\"13f-fgK3ZX0WF78unobt+TCM5FuyTV0\"",
+      "date": "Fri, 06 Nov 2026 20:01:47 GMT",
+      "connection": "keep-alive",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"error\":\"Case not found\",\"stack\":\"HttpError: Case not found\\n    at notFound (/Users/robcole/cursor-demo/case-intake-api/src/httpError.ts:12:10)\\n    at getById (/Users/robcole/cursor-demo/case-intake-api/src/services/cases.ts:58:19)\\n    at async /Users/robcole/cursor-demo/case-intake-api/src/routes/cases.ts:33:18\"}"
+  },
+  "allowed": {
+    "role": "allowed",
+    "examinerId": "examiner-a",
+    "method": "GET",
+    "url": "http://127.0.0.1:53764/cases/1042",
+    "status": 200,
+    "headers": {
+      "x-powered-by": "Express",
+      "content-type": "application/json; charset=utf-8",
+      "content-length": "69",
+      "etag": "W/\"45-mnyCdb158qEwKmwlEd1AyTr/R3o\"",
+      "date": "Fri, 06 Nov 2026 20:01:47 GMT",
+      "connection": "keep-alive",
+      "keep-alive": "timeout=5"
+    },
+    "body": "{\"id\":1042,\"title\":\"Northwind Capital Periodic Exam\",\"status\":\"open\"}"
+  }
+}
