@@ -1,0 +1,5 @@
+.harness/scope/412.txt
+tests/api/cases.ac-3.test.ts
+src/routes/cases.ts
+src/services/cases.ts
+evidence/412/deny.json
